@@ -11,7 +11,7 @@ It can:
 
 Download the most recent release from [here](https://github.com/TheAmazingJeh/Genshin-World-Quest-Tracker/releases/latest) and run it in its own folder.
 
-<!-- If you do not want to use the auto downloading function, you can download the latest quest data from [here](example.com) -->
+If you do not want to use the auto downloading function, you can download the latest quest data from [here](https://github.com/TheAmazingJeh/Genshin-World-Quest-Data/releases/latest)
 
 It is still possible to run the `.pyw` version as well if you have python. To do this, download the source code (.zip) from [here](https://github.com/TheAmazingJeh/Genshin-World-Quest-Tracker/releases/latest), extract it and run `pip install -r requirements.txt` in the unzipped file. You can then run `app.pyw`
 
