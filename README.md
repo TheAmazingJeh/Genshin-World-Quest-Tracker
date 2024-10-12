@@ -4,7 +4,7 @@ A tool that can help you keep track of world quests in Genshin Impact.
 It can:
 - Show world quests, and world quest series'.
 - Show world quest's rewards and steps.
-- Allow you tp mark quests off as complete.
+- Allow you to mark quests off as complete.
 - Download quests directly from Fandom.
 
 ## Installation
