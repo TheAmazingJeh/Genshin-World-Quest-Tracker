@@ -121,6 +121,7 @@ class App(Tk):
         self.questDetailsFrame.grid(row=1, column=1, sticky="se")
 
     def change_loaded_quest(self, questID:str):
+        if questID in ["", "None", None]: return
         # Hide the current quest details
         self.questDetailsFrame.grid_forget()
         # Load the new quest details
