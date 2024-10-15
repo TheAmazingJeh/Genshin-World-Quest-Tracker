@@ -74,8 +74,9 @@ class App(Tk):
     def initialize(self):
         # Initialize the window
         self.size = (1000, 500)
+        self.MENUBAR_OFFSET = 18
         self.title("Genshin Impact World Quest Tool")
-        self.geometry(f"{self.size[0]}x{self.size[1]}")
+        self.geometry(f"{self.size[0]}x{self.size[1]+self.MENUBAR_OFFSET}")
         self.resizable(False, False)
 
     def place_widgets(self):
