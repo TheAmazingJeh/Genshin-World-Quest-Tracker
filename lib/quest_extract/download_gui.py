@@ -67,6 +67,7 @@ def download():
         p.update()
         p.step()
         if p.complete: break
+    os.environ["questLoadingErrorFlag"] = "False"
 
 def reFetchWorldQuestsAndDownload():
     if os.path.exists(os.environ["cachePath"]):
@@ -84,8 +85,4 @@ def reFetchWorldQuestsAndDownload():
 
 def resetAndDownload():
     if not os.path.exists(os.environ["dataPath"]): os.makedirs(os.environ["dataPath"])
-    p = DownloadPopup("Downloading")
-    while True:
-        p.update()
-        p.step()
-        if p.complete: break
+    download()
