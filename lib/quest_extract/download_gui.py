@@ -90,8 +90,8 @@ def resetAndDownload():
     if os.path.exists(os.environ["cachePath"]): shutil.rmtree(os.environ["cachePath"])
     # Delete the data folder (but not the completed quests file)
     if os.path.exists(os.environ["dataPath"]): 
-        shutil.rmtree(os.path.join((os.environ["dataPath"], "quests")))
-        shutil.rmtree(os.path.join((os.environ["dataPath"], "img")))
+        shutil.rmtree(os.path.join(os.environ["dataPath"], "quests"))
+        shutil.rmtree(os.path.join(os.environ["dataPath"], "img"))
     # Delete the world quest data dictionary
     try: os.remove(os.environ["worldQuestDataDict"])
     except FileNotFoundError: pass
