@@ -97,7 +97,8 @@ class Download:
         with open(os.environ["worldQuestDataDict"], 'r', encoding="utf-8") as file:
             worldQuestDataDict = json.load(file)
 
-        lastUpdated = datetime.strptime(worldQuestDataDict["timeUpdated"], "%Y-%m-%d %H:%M:%S")
+        if "timeUpdated" not in worldQuestDataDict: lastUpdated = datetime.now()
+        else: lastUpdated = datetime.strptime(worldQuestDataDict["timeUpdated"], "%Y-%m-%d %H:%M:%S")
         # Print how long ago the data was last updated
         print(f"Data was last updated {lastUpdated.strftime('%Y-%m-%d %H:%M:%S')}")
         self.worldQuestDataDict = worldQuestDataDict["regions"]

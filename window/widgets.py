@@ -6,6 +6,7 @@ from copy import deepcopy
 from tkinter import Tk, Toplevel, Frame, Canvas, Listbox, Scrollbar, Label, Text, Button, OptionMenu, StringVar
 from tkinter.messagebox import askyesno, showwarning, showerror
 from tkinter.font import Font
+from tkinter.scrolledtext import ScrolledText
 
 from utils.file_functions import name_to_id, load_json
 
@@ -76,6 +77,7 @@ class ToolTip(object):
         label.pack(ipadx=1)
 
     def hidetip(self):
+        "Hide the tooltip"
         if self.id:
             self.widget.after_cancel(self.id)
             self.id = None
@@ -85,6 +87,9 @@ class ToolTip(object):
             tw.destroy()
 
 def CreateToolTip(widget, text):
+    """Create a tooltip for a widget.
+    
+    Attached to `widget` with the text `text`."""
     toolTip = ToolTip(widget)
     
     def enter(event):
@@ -163,7 +168,7 @@ class WorldQuestFrame(Frame):
 
         # Bind the on_item_select function to the Listbox double click event
         self.listbox.bind("<Double-Button-1>", lambda _: double_click())
-        # Bind the on_item_select function to any listbox selection event
+        # Bind the on_item_select function to the Listbox select event
         self.listbox.bind("<<ListboxSelect>>", lambda _: select_listbox(self.get_selected()))
 
     def append_quest(self, questID:str, completedQuestData:dict):
@@ -189,6 +194,7 @@ class WorldQuestFrame(Frame):
         # Check what quest type the quest is
         if item.questType in ["series", "act"]:
             steps = os.environ["currentSelectedQuestPath"].replace(os.environ["baseQuestPath"], "").split(os.sep)[1:]
+            
             if len(steps) == 1:
                 if questID not in self.completedQuestData[steps[0]]["series"]:
                     state = "uncompleted"
@@ -219,21 +225,24 @@ class WorldQuestFrame(Frame):
                                     break
             elif len(steps) == 2:
                 # Processing acts
+                
+                # No clue what this does, probably The Gourmet Supremos or something
                 if questID not in [quest["name"] for quest in self.worldQuestData[steps[0]]["series"][steps[1]]]:
                     state = "uncompleted"
                 else:
                     state = "in_progress"
-                    print(steps, questID)
                     # Get all the subquests of the current act
                     for quest in self.worldQuestData[steps[0]]["series"][steps[1]]:
                         if quest["name"] == questID:
                             quests = set(quest["subquests"])
 
                     completed_quests = None
-                    # Get all the completed quests of the current act
-                    for quest in completedQuestData[steps[0]]["series"][steps[1]]:
-                        if quest["name"] == questID:
-                            completed_quests = set(quest["subquests"])
+                    # Check if the act is in the completed quests
+                    if steps[1] in completedQuestData[steps[0]]["series"]:
+                        # Get all the completed quests of the current act
+                        for quest in completedQuestData[steps[0]]["series"][steps[1]]:
+                            if quest["name"] == questID:
+                                completed_quests = set(quest["subquests"])
                     
                     if completed_quests == None:
                         state = "uncompleted"
@@ -241,8 +250,7 @@ class WorldQuestFrame(Frame):
                         state = "completed"
                     else:
                         state = "in_progress"
-                
-
+                        
         if item.questType == "single":
             steps = os.environ["currentSelectedQuestPath"].replace(os.environ["baseQuestPath"], "").split(os.sep)[1:]
             if len(steps) == 1:
@@ -318,7 +326,10 @@ class WorldQuestFrame(Frame):
 
     def get_selected(self):
         """Returns the quest ID of the selected quest in the listbox."""
-        return self.data[self.listbox.curselection()[0]].getQuestID()
+        try:
+            return self.data[self.listbox.curselection()[0]].getQuestID()
+        except IndexError:
+            return None
 
     def set_shown_types(self, shown_quests:str):
         '''Sets the type of quests to be shown in the listbox.
@@ -628,16 +639,18 @@ class QuestRewardFrame(Frame):
         self.nextPos = [0,0]
 
 class MarkdownTextGenerator:
-    def __init__(self, parent, dataDict:dict, imgPath:str, imageHost:list, startText:str="", canvas:Canvas=None):
-        self.markdown_string = dataDict["markdown"] if "markdown" in dataDict else dataDict["plaintext"]
+    def __init__(self, parent, data_string:str, 
+                imgPath:str, imageHost:list, imgDict:dict={}, 
+                startText:str=""
+                ):
+        self.markdown_string = data_string
         self.border_width = 0
 
         self.parent = parent
         self.imageHost = imageHost
-        self.canvas = canvas
 
         self.imgpath = imgPath
-        self.imageDict = dataDict["img"] if "img" in dataDict else {}
+        self.imageDict = imgDict
         self.widgetList = []
         self.image_reference = [] # List of image references, to prevent images disappearing
 
@@ -654,13 +667,12 @@ class MarkdownTextGenerator:
         if url:
             self.widgetList.append(Label(self.parent, text=text, fg="blue", bg=self.parent.cget("background"), cursor="hand2", borderwidth=self.border_width, relief="solid"))
             self.widgetList[-1].bind("<Button-1>", lambda event, url=url: webbrowser.open_new(url))
-            # Bind the scroll wheel event to the parent scroll event
-            if self.canvas: self.widgetList[-1].bind("<MouseWheel>", lambda event: self.canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
             CreateToolTip(self.widgetList[-1], text=url)
         else:
             self.widgetList.append(Label(self.parent, text=text, bg=self.parent.cget("background"), borderwidth=self.border_width, relief="solid"))
-            # Bind the scroll wheel event to the parent scroll event
-            if self.canvas: self.widgetList[-1].bind("<MouseWheel>", lambda event: self.canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        
+        # Make scrolling on the text effect the text widget
+        self.widgetList[-1].bind("<MouseWheel>", lambda event: self.parent.yview_scroll(-1*(event.delta//120), "units"))
 
     def append_image(self, image):
         # Remove the img:from the image string
@@ -677,6 +689,8 @@ class MarkdownTextGenerator:
         self.imageHost.append(img)
         # Add the image to the widget list
         self.widgetList.append(Label(self.parent, image=img, bg=self.parent.cget("background"), borderwidth=self.border_width, relief="solid"))
+        # Make scrolling on the image effect the text widget
+        self.widgetList[-1].bind("<MouseWheel>", lambda event: self.parent.yview_scroll(-1*(event.delta//120), "units"))
 
     def insert_markdown(self):
         self.markdown_string = f"{self.startText}{self.markdown_string}"
@@ -747,36 +761,78 @@ class MarkdownTextGenerator:
         self.widgetList.append("\n")
         return self.widgetList
 
-class QuestStepsFrame(ScrollableFrame):
+class QuestStepsFrame(Frame):
     def __init__(self, root, *args, **kwargs):
         super().__init__(root, *args, **kwargs)
-        self.container = Frame(self.scrollable_frame)
         
-        #self.container.pack_propagate(False)
-        self.container.pack(fill="both", expand=True)
         self.imgPath = os.environ["imgPath"]
         self.image_host = []
         self.steps = []
-        self.text_widget = Text(self.container, borderwidth=0, relief=None, background=None)
-        self.text_widget.pack(fill="both", expand=True)
-
-    def _process_substep(self, substeps:dict, indent_amount:int):
-        for substep in substeps:
-            if not isinstance(substep, dict): continue
-            self.steps.append(MarkdownTextGenerator(self.text_widget, substep, self.imgPath, self.image_host, canvas=self.canvas, startText=f"{'🡂'*indent_amount}• ").insert_markdown())
-            if "substeps" in substep:
-                self._process_substep(substep["substeps"], indent_amount+1)
+        self.text_widget = ScrolledText(self, borderwidth=0, relief=None, background=None)
+        self.text_widget.pack(fill="both", expand=True, ipadx=0, ipady=0)
 
     def set_steps(self, stepsDict:dict):
+        # Tags to process:
+        # - h: headings (h2 or h3)
+        # - p: paragraphs
+        # - ul: unordered lists
+        # - ol: ordered lists
+        # - li: list items
+
+        def _process_list(step:dict, indent_level:int):
+            list_type = step["tag"]
+            
+            steps = []
+
+            i = 0
+            for substep in step["steps"]:
+                if list_type == "ol":
+                    prefix = f"{i+1}. "
+                else:
+                    prefix = "• "
+                
+                if substep["tag"] == "li":
+                    i += 1
+
+                steps.extend(_process_list_item(substep, indent_level, prefix))
+                
+            
+            return steps
+
+        def _process_list_item(step:dict, indent_level:int, prefix:str):
+            if step["tag"] in ["ul", "ol"]:
+                return _process_list(step, indent_level+1)
+            if step["tag"] == "li":
+                return [_process_li(step, prefix, indent_level)]
+            else:
+                raise ValueError(f"Invalid tag {step['tag']}")
+
+        def _process_li(step:str, prefix:str, indent_level:int):
+            newPrefix = "🡂"*indent_level + prefix
+            return MarkdownTextGenerator(self.text_widget, step["text"], self.imgPath, self.image_host, startText=newPrefix, imgDict=step["img"] if "img" in step else {}).insert_markdown()
+
+        def _process_p(step:str):
+            return MarkdownTextGenerator(self.text_widget, step["text"], self.imgPath, self.image_host, imgDict=step["img"] if "img" in step else {}).insert_markdown()
+
         self.clear_steps()
         self.text_widget.configure(state="normal")
-        i = 1
-        for step in stepsDict:
-            self.steps.append(MarkdownTextGenerator(self.text_widget, step, self.imgPath, self.image_host, canvas=self.canvas, startText=f"{i}. ").insert_markdown())
-            if "substeps" in step:
-                self._process_substep(step["substeps"], 1)
-            i += 1
 
+
+        try:
+            for step in stepsDict:
+                if step["tag"] == "p":
+                    self.steps.append(_process_p(step))
+                elif step["tag"] == "h": #FIXME: Add headings
+                    self.steps.append(_process_p(step))
+                elif step["tag"] in ["ul", "ol"]:
+                    self.steps.extend(_process_list(step, indent_level=1))
+                else:
+                    print("WARNING: Unhandled tag", step["tag"])
+        except Exception as e:
+            showerror("Error", f"An error occurred while processing the steps, press OK to show the error message in the console.")
+            raise e
+
+        # Place all the widgets contained in the steps list
         for step in self.steps:
             # Insert the step into the text widget
             for widget in step:
@@ -784,17 +840,24 @@ class QuestStepsFrame(ScrollableFrame):
                     self.text_widget.insert("end", widget)
                 else:
                     self.text_widget.window_create("end", window=widget)
+
         self.text_widget.configure(state="disabled")
-        
+
         self.scroll_to_top()
 
     def clear_steps(self):
+        # Set the text widget to be editable
         self.text_widget.configure(state="normal")
         self.text_widget.delete("1.0", "end")
         self.text_widget.configure(state="disabled")
         self.steps = []
         self.image_host = []
-        self._on_frame_configure(None)
+
+    def scroll_to_top(self):
+        # Scroll to the end of the text widget
+        self.text_widget.see("end")
+        # Scroll to the top of the text widget
+        self.text_widget.see("1.0")
 
 class StartingLocationFrame(Frame):
     def __init__(self, root, *args, **kwargs):
@@ -805,7 +868,7 @@ class StartingLocationFrame(Frame):
 
     def set_start(self, infodict):
         self.clear_start()
-        widgets = MarkdownTextGenerator(self.internal_frame, infodict, self.imgPath, [], startText="Location: ").insert_markdown()
+        widgets = MarkdownTextGenerator(self.internal_frame, infodict["text"], self.imgPath, [], startText="Location: ").insert_markdown()
         for widget in widgets:
             if isinstance(widget, str): continue
             widget.pack(side="left", anchor="w")

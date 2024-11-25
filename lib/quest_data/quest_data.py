@@ -11,7 +11,8 @@ class Quest:
         self.soup = BeautifulSoup(self.html, 'lxml')
 
         self.quest_data = {
-            "type": "", # Single or Series
+            "version": "1.1", # Version of the quest data (For error checking)
+            "type": "",       # Single or Series
             "name": conversionRef[name], # Name of the quest
             "url": self.quest_url, # URL for the quest
         }
