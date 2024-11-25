@@ -2,15 +2,22 @@ import os, sys, shutil, json
 
 
 from tkinter import Tk, Frame, Menu
-from tkinter.messagebox import askokcancel
-
-from tkinter import TclError
+from tkinter.messagebox import askokcancel, showinfo
 
 from window.widgets import WorldQuestFrame, QuestDetailsFrame, FilterFrame
 from utils.file_functions import load_json
 
 from lib.quest_extract.download_gui import download, reFetchWorldQuestsAndDownload
 
+def download_data_prompt(tk_window=None, show_prompt=True):
+    downloadAutomatic = askokcancel("Error", "World Quest Data is missing. This is either available on the github page or can be generated now. Would you like to generate it now?")
+    if downloadAutomatic:
+        download()
+        showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
+    else:
+        if tk_window is not None: tk_window.quit()
+    sys.exit() 
+    
 
 class App(Tk):
     def __init__(self, basepath:str, *args, **kwargs):
@@ -40,16 +47,16 @@ class App(Tk):
 
         # Check for the existence of the data folder
         if not os.path.exists(os.environ["worldQuestSeriesData"]): 
-            downloadAutomatic = askokcancel("Error", "World Quest Data is missing. This is either available on the github page or can be generated now. Would you like to generate it now?")
-            if downloadAutomatic:
-                download()
-            else:
-                self.quit()
-                sys.exit() 
+            download_data_prompt(tk_window=self)
 
         self.worldQuestDataDict = load_json(os.path.join(os.environ["dataPath"], "worldQuestDataDict.json"))
         self.completedQuestData = load_json(os.path.join(os.environ["dataPath"], "completedQuestData.json"))
 
+        # Check if the worldQuestDataDict is empty
+        if self.worldQuestDataDict == {}:
+            download_data_prompt(tk_window=self)
+
+        # Get the regions
         self.regions = list(self.worldQuestDataDict["regions"].keys())
 
         with open(os.path.join(os.environ["dataPath"], "completedQuestData.json"), "r", encoding="utf-8") as file:
@@ -87,8 +94,8 @@ class App(Tk):
         self.menu = Menu(self)
         # Add a File Cascade
         self.fileMenu = Menu(self.menu, tearoff=0)
-        self.fileMenu.add_command(label="Repair Resources", command=download)
-        self.fileMenu.add_command(label="Re-Download Resources", command=reFetchWorldQuestsAndDownload)
+        self.fileMenu.add_command(label="Repair Resources", command=self.menu_download)
+        self.fileMenu.add_command(label="Re-Download Resources", command=self.menu_reFetchWorldQuestsAndDownload)
         self.fileMenu.add_separator()
         self.fileMenu.add_command(label="Exit", command=self.quit)
         self.menu.add_cascade(label="File", menu=self.fileMenu)
@@ -97,6 +104,16 @@ class App(Tk):
         self.menu.add_separator()
 
         self.config(menu=self.menu)
+
+    def menu_download(self):
+        download()
+        self.worldQuestFrame.reload()
+        os.environ["questLoadingErrorFlag"] = "False"
+
+    def menu_reFetchWorldQuestsAndDownload(self):
+        reFetchWorldQuestsAndDownload()
+        self.worldQuestFrame.reload()
+        os.environ["questLoadingErrorFlag"] = "False"
 
     def place_frames(self):
         self.worldQuestFrame = WorldQuestFrame(self, self.worldQuestDataDict["regions"], bg="black",
