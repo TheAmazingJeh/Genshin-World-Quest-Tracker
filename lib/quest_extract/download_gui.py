@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, shutil
 
 from lib.quest_extract.extract_all import Download
 from lib.page.get_wiki_url_from_name import get_wiki_url_from_name
@@ -68,7 +68,6 @@ def download():
         p.update()
         p.step()
         if p.complete: break
-    os.environ["questLoadingErrorFlag"] = "False"
 
 def reFetchWorldQuestsAndDownload():
     if os.path.exists(os.environ["cachePath"]):
@@ -82,11 +81,18 @@ def reFetchWorldQuestsAndDownload():
         try: os.remove(os.path.join(os.environ["dataPath"], "convertIDToNameDict.json"))
         except FileNotFoundError: pass
         download()
+        showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
+        sys.exit()
 
 
 def resetAndDownload():
-    if not os.path.exists(os.environ["dataPath"]): os.makedirs(os.environ["dataPath"])
+    # Delete the cached data folder
+    if os.path.exists(os.environ["cachePath"]): shutil.rmtree(os.environ["cachePath"])
+    # Delete the data folder
+    if os.path.exists(os.environ["dataPath"]): shutil.rmtree(os.environ["dataPath"])
     download()
+    showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
+    sys.exit()
 
 def download_data_prompt(tk_window=None, show_prompt=True):
     downloadAutomatic = askokcancel("Error", "World Quest Data is missing. This is either available on the github page or can be generated now. Would you like to generate it now?")

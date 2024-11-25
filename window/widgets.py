@@ -1,4 +1,4 @@
-import json, os, webbrowser, random
+import json, os, webbrowser, sys
 
 from PIL import Image, ImageTk
 from copy import deepcopy
@@ -8,6 +8,18 @@ from tkinter.messagebox import askyesno, showwarning, showerror
 from tkinter.font import Font
 
 from utils.file_functions import name_to_id, load_json
+
+from lib.quest_extract.download_gui import resetAndDownload
+
+CURRENT_QUEST_FORMAT_VERSION = "1.1"
+
+def olderQuestFormatWarning(version):
+    if version != CURRENT_QUEST_FORMAT_VERSION:
+        do_update = askyesno("Old Quest Format", f"The quest formatting version of the downloaded quests ({version}), is incorrect and will not work with the current quest version. {CURRENT_QUEST_FORMAT_VERSION}. Do you want to update? (Choosing NO will close the program)", icon="error")
+        if do_update:
+            resetAndDownload()
+        else:
+            sys.exit()
 
 class ScrollableFrame(Frame):
     def __init__(self, container, *args, **kwargs):
@@ -91,6 +103,9 @@ class WorldQuestFrameItem:
 
         with open(path, "r", encoding="utf-8") as f:
             res = json.load(f)
+
+        # Check if the quest format is correct
+        olderQuestFormatWarning(res["version"] if "version" in res else "-1.0")
 
         self.questName = res["name"]
         self.questType = res["type"]
