@@ -7,17 +7,7 @@ from tkinter.messagebox import askokcancel, showinfo
 from window.widgets import WorldQuestFrame, QuestDetailsFrame, FilterFrame
 from utils.file_functions import load_json
 
-from lib.quest_extract.download_gui import download, reFetchWorldQuestsAndDownload
-
-def download_data_prompt(tk_window=None, show_prompt=True):
-    downloadAutomatic = askokcancel("Error", "World Quest Data is missing. This is either available on the github page or can be generated now. Would you like to generate it now?")
-    if downloadAutomatic:
-        download()
-        showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
-    else:
-        if tk_window is not None: tk_window.quit()
-    sys.exit() 
-    
+from lib.quest_extract.download_gui import download, reFetchWorldQuestsAndDownload, download_data_prompt
 
 class App(Tk):
     def __init__(self, basepath:str, *args, **kwargs):

@@ -86,3 +86,12 @@ def reFetchWorldQuestsAndDownload():
 def resetAndDownload():
     if not os.path.exists(os.environ["dataPath"]): os.makedirs(os.environ["dataPath"])
     download()
+
+def download_data_prompt(tk_window=None, show_prompt=True):
+    downloadAutomatic = askokcancel("Error", "World Quest Data is missing. This is either available on the github page or can be generated now. Would you like to generate it now?")
+    if downloadAutomatic:
+        download()
+        showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
+    else:
+        if tk_window is not None: tk_window.quit()
+    sys.exit() 
