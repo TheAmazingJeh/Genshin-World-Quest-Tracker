@@ -1,9 +1,10 @@
-import os
+import os, sys
 
 from lib.quest_extract.extract_all import Download
 from lib.page.get_wiki_url_from_name import get_wiki_url_from_name
 from tkinter import Tk, Label
 from tkinter.ttk import Progressbar
+from tkinter.messagebox import askokcancel, showinfo
 
 class DownloadPopup(Tk):
     def __init__(self, title=None):
