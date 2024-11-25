@@ -88,8 +88,17 @@ def reFetchWorldQuestsAndDownload():
 def resetAndDownload():
     # Delete the cached data folder
     if os.path.exists(os.environ["cachePath"]): shutil.rmtree(os.environ["cachePath"])
-    # Delete the data folder
-    if os.path.exists(os.environ["dataPath"]): shutil.rmtree(os.environ["dataPath"])
+    # Delete the data folder (but not the completed quests file)
+    if os.path.exists(os.environ["dataPath"]): 
+        shutil.rmtree(os.path.join((os.environ["dataPath"], "quests")))
+        shutil.rmtree(os.path.join((os.environ["dataPath"], "img")))
+    # Delete the world quest data dictionary
+    try: os.remove(os.environ["worldQuestDataDict"])
+    except FileNotFoundError: pass
+    # Delete the conversion reference
+    try: os.remove(os.path.join(os.environ["dataPath"], "convertIDToNameDict.json"))
+    except FileNotFoundError: pass
+
     download()
     showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
     sys.exit()
