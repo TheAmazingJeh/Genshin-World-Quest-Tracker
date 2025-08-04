@@ -3,12 +3,13 @@ from bs4 import BeautifulSoup
 from lib.quest_data.quest_data_series import QuestSeries
 from lib.quest_data.quest_data_single import QuestSingle
 from lib.quest_data.quest_data_act import QuestAct
+from lib.quest_data.quest_data_placeholder import QuestPlaceholder
 
 from lib.page.get_page import get_local_page
 from lib.page.get_wiki_url_from_name import get_wiki_url_from_name
 
 
-def getQuest(name:str, questsDict:dict, basepath:str, conversionRef:dict) -> QuestSeries|QuestSingle|QuestAct:
+def getQuest(name:str, questsDict:dict, basepath:str, conversionRef:dict) -> QuestSeries|QuestSingle|QuestAct|QuestPlaceholder:
     
     quest_url = get_wiki_url_from_name(name, conversionRef)
     html = get_local_page(quest_url, basepath)
@@ -28,4 +29,4 @@ def getQuest(name:str, questsDict:dict, basepath:str, conversionRef:dict) -> Que
         elif "World Quest" in tag.text:
             return QuestSingle(name, basepath, conversionRef)
 
-    raise Exception(f"\"{name}\" isn't a World Quest or World Quest Series")
+    return QuestPlaceholder(name, basepath, conversionRef)
