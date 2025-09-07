@@ -514,10 +514,13 @@ class QuestDetailsFrame(Frame):
 
     def format_widgets(self):
         self.hide_all_widgets()
-        if self.questData["starting_location"] is not None: self.questLocation.pack(padx=5, pady=5, fill="x", anchor="n")
-        if self.questData["rewards"] is not None: self.questRewards.pack(padx=5, pady=5)
+        if "starting_location" in self.questData and self.questData["starting_location"] is not None: 
+            self.questLocation.pack(padx=5, pady=5, fill="x", anchor="n")
+        if "rewards" in self.questData and self.questData["rewards"] is not None: 
+            self.questRewards.pack(padx=5, pady=5)
         self.questHorizontalBar.pack(fill="x")
-        if self.questData["steps"] is not None: self.questSteps.pack(padx=10, pady=5, fill="x")
+        if "steps" in self.questData and self.questData["steps"] is not None: 
+            self.questSteps.pack(padx=10, pady=5, fill="x")
 
     def set_data(self, path: str):
         with open(path, "r", encoding="utf-8") as f:
@@ -529,15 +532,15 @@ class QuestDetailsFrame(Frame):
         self.questType.config(text=questTypeText)
 
         # If the starting location is not N/A, set the starting location
-        if self.questData["starting_location"] is not None:
+        if "starting_location" in self.questData and self.questData["starting_location"] is not None:
             self.questLocation.set_start(self.questData["starting_location"])
 
         # If the rewards are not N/A, set the rewards
-        if self.questData["rewards"] is not None:
+        if "rewards" in self.questData and self.questData["rewards"] is not None:
             self.questRewards.set_rewards(self.questData["rewards"])
 
         # If the steps are not N/A, set the steps
-        if self.questData["steps"] is not None:
+        if "steps" in self.questData and self.questData["steps"] is not None:
             self.questSteps.set_steps(self.questData["steps"])
 
         self.format_widgets()
@@ -639,127 +642,220 @@ class QuestRewardFrame(Frame):
         self.nextPos = [0,0]
 
 class MarkdownTextGenerator:
-    def __init__(self, parent, data_string:str, 
+    def __init__(self, text_widget, data_string:str, 
                 imgPath:str, imageHost:list, imgDict:dict={}, 
                 startText:str=""
                 ):
         self.markdown_string = data_string
-        self.border_width = 0
-
-        self.parent = parent
+        self.text_widget = text_widget
         self.imageHost = imageHost
-
         self.imgpath = imgPath
         self.imageDict = imgDict
-        self.widgetList = []
-        self.image_reference = [] # List of image references, to prevent images disappearing
-
+        self.startText = startText
+        
         self.linkMode = False
         self.imageMode = False
-        self.startText = startText
         self.textBuffer = ""
         self.linkText = ""
+        self.links = []  # Store link information for click handling
+        self.link_counter = 0  # Instance variable for unique link IDs
+        self.tooltip = None  # Initialize tooltip
 
-    def append_text(self, text, url:str=None):
-        # Strip the text buffer of any ending or starting spaces
-        if text == "": return
-
-        if url:
-            self.widgetList.append(Label(self.parent, text=text, fg="blue", bg=self.parent.cget("background"), cursor="hand2", borderwidth=self.border_width, relief="solid"))
-            self.widgetList[-1].bind("<Button-1>", lambda event, url=url: webbrowser.open_new(url))
-            CreateToolTip(self.widgetList[-1], text=url)
-        else:
-            self.widgetList.append(Label(self.parent, text=text, bg=self.parent.cget("background"), borderwidth=self.border_width, relief="solid"))
+    def insert_text(self, text, is_link=False, url=None):
+        if text == "":
+            return
         
-        # Make scrolling on the text effect the text widget
-        self.widgetList[-1].bind("<MouseWheel>", lambda event: self.parent.yview_scroll(-1*(event.delta//120), "units"))
+        start_index = self.text_widget.index("end-1c")
+        self.text_widget.insert("end", text)
+        end_index = self.text_widget.index("end-1c")
+        
+        if is_link and url:
+            # Create a unique tag name using the instance counter
+            tag_name = f"link_{self.link_counter}"
+            self.link_counter += 1
+            
+            self.text_widget.tag_add(tag_name, start_index, end_index)
+            self.text_widget.tag_config(tag_name, foreground="blue", underline=True)
+            
+            # Store link info for reference
+            self.links.append(url)
+            
+            # Create lambdas that capture the URL value at this moment
+            click_handler = lambda event, link_url=url: webbrowser.open_new(link_url)
+            enter_handler = lambda event, link_url=url: (
+                self.text_widget.config(cursor="hand2"),
+                self.show_tooltip(event, link_url)
+            )
+            leave_handler = lambda event: (
+                self.text_widget.config(cursor=""),
+                self.hide_tooltip()
+            )
+            motion_handler = lambda event: (
+                self.update_tooltip_position(event) if hasattr(self, 'tooltip') and self.tooltip else None
+            )
+            
+            # Bind events with the URL-capturing lambdas
+            self.text_widget.tag_bind(tag_name, "<Button-1>", click_handler)
+            self.text_widget.tag_bind(tag_name, "<Enter>", enter_handler)
+            self.text_widget.tag_bind(tag_name, "<Leave>", leave_handler)
+            self.text_widget.tag_bind(tag_name, "<Motion>", motion_handler)
 
-    def append_image(self, image):
-        # Remove the img:from the image string
+    def show_tooltip(self, event, text):
+        # Remove any existing tooltip
+        self.hide_tooltip()
+        
+        # Calculate position
+        x = self.text_widget.winfo_rootx() + event.x + 10
+        y = self.text_widget.winfo_rooty() + event.y + 10
+        
+        # Create tooltip window
+        self.tooltip = Toplevel(self.text_widget)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry(f"+{x}+{y}")
+        
+        label = Label(self.tooltip, text=text, justify="left",
+                    background="#ffffe0", relief="solid", borderwidth=1,
+                    font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+    
+    def update_tooltip_position(self, event):
+        if hasattr(self, 'tooltip') and self.tooltip:
+            # Calculate new position
+            x = self.text_widget.winfo_rootx() + event.x + 10
+            y = self.text_widget.winfo_rooty() + event.y + 10
+            
+            # Update tooltip position
+            self.tooltip.wm_geometry(f"+{x}+{y}")
+    
+    def hide_tooltip(self):
+        if hasattr(self, 'tooltip') and self.tooltip:
+            self.tooltip.destroy()
+            self.tooltip = None
+
+    def insert_image(self, image):
+        # Remove the img: from the image string
         image = image.replace("img:", "")
+        
+        if image not in self.imageDict:
+            return
+            
         # Get the image path
         image_path = os.path.join(self.imgpath, self.imageDict[image])
-        # Load the image with pillow
-        img = Image.open(image_path)
-        # Resize the image
-        img = img.resize((20, 20))
-        # Convert the image to a Tkinter PhotoImage
-        img = ImageTk.PhotoImage(img)
-        # Prevent the image from being garbage collected
-        self.imageHost.append(img)
-        # Add the image to the widget list
-        self.widgetList.append(Label(self.parent, image=img, bg=self.parent.cget("background"), borderwidth=self.border_width, relief="solid"))
-        # Make scrolling on the image effect the text widget
-        self.widgetList[-1].bind("<MouseWheel>", lambda event: self.parent.yview_scroll(-1*(event.delta//120), "units"))
+        
+        if not os.path.exists(image_path):
+            return
+            
+        try:
+            # Load the image with pillow
+            img = Image.open(image_path)
+            # Resize the image
+            img = img.resize((20, 20), Image.LANCZOS)
+            # Convert the image to a Tkinter PhotoImage
+            img_tk = ImageTk.PhotoImage(img)
+            # Prevent the image from being garbage collected
+            self.imageHost.append(img_tk)
+            # Insert the image into the text widget
+            self.text_widget.image_create("end", image=img_tk)
+        except Exception as e:
+            # If image loading fails, insert placeholder text
+            self.insert_text(f"[{image}]")
 
-    def insert_markdown(self):
-        self.markdown_string = f"{self.startText}{self.markdown_string}"
-        for char in self.markdown_string:
+    def insert_image_with_dict(self, image, image_dict):
+        # Remove the img: from the image string
+        image = image.replace("img:", "")
+        
+        if image_dict is None or image not in image_dict:
+            return
+            
+        # Get the image path
+        image_path = os.path.join(self.imgpath, image_dict[image])
+        
+        if not os.path.exists(image_path):
+            return
+            
+        try:
+            # Load the image with pillow
+            img = Image.open(image_path)
+            # Resize the image
+            img = img.resize((20, 20), Image.LANCZOS)
+            # Convert the image to a Tkinter PhotoImage
+            img_tk = ImageTk.PhotoImage(img)
+            # Prevent the image from being garbage collected
+            self.imageHost.append(img_tk)
+            # Insert the image into the text widget
+            self.text_widget.image_create("end", image=img_tk)
+        except Exception as e:
+            # If image loading fails, insert placeholder text
+            self.insert_text(f"[{image}]")
 
+    def insert_markdown(self, markdown_string=None, start_text="", image_dict=None):
+        # Use provided arguments or fall back to instance variables
+        if markdown_string is None:
+            markdown_string = self.markdown_string
+        if image_dict is None:
+            image_dict = self.imageDict
+        
+        # Reset buffer states for clean processing
+        self.linkMode = False
+        self.imageMode = False
+        self.textBuffer = ""
+        self.linkText = ""
+        
+        full_text = f"{start_text}{markdown_string}"
+        
+        for char in full_text:
             # Check for the start of a link
             if char == "◀":
-                # Strip the text buffer of any ending or starting spaces
-                self.textBuffer = self.textBuffer.strip()
-                # Add the text to the widget list 
-                self.append_text(self.textBuffer)
-                # Reset the text buffer
+                # Insert any buffered text first
+                self.insert_text(self.textBuffer)
                 self.textBuffer = ""
-                # Set the link mode to True, so we know we are in a link
                 self.linkMode = True
                 continue
 
-            # Check for the end of the seeable text content of a link
+            # Check for the end of the visible text content of a link
             elif char == "▶" and self.linkMode:
-                # Set the text of the link, and reset the text buffer
                 self.linkText = self.textBuffer
                 self.textBuffer = ""
                 continue
 
-            # Check for the start of a link
+            # Check for the start of link URL
             elif char == "◁" and self.linkMode:
-                # Ignore the opening bracket
                 continue
 
             # Check for the end of a link
             elif char == "▷" and self.linkMode:
-                # Add the link to the widget list
-                self.append_text(self.linkText, url=self.textBuffer)
-
+                # Insert the link
+                self.insert_text(self.linkText, is_link=True, url=self.textBuffer)
                 self.textBuffer = ""
+                self.linkText = ""
                 self.linkMode = False
                 continue
 
+            # Check for start of image
             elif char == "<":
-                self.append_text(self.textBuffer)
+                self.insert_text(self.textBuffer)
                 self.textBuffer = ""
                 self.imageMode = True
                 continue
 
+            # Check for end of image
             elif char == ">" and self.imageMode:
-                # Add the image to the widget list
-                self.append_image(self.textBuffer)
+                self.insert_image_with_dict(self.textBuffer, image_dict)
                 self.textBuffer = ""
                 self.imageMode = False
                 continue
             
+            # Handle special arrow character
             elif char == "🡂":
-                self.textBuffer = f"{self.textBuffer}  "
+                self.textBuffer += "  "
                 continue
 
-            elif char == " " and (not self.linkMode and not self.imageMode):
-                self.append_text(self.textBuffer+"")
-                self.textBuffer = ""
-                continue
-                
-
-            # Increment the text buffer with the current character
-            self.textBuffer = f"{self.textBuffer}{char}"
+            # Add character to buffer
+            self.textBuffer += char
         
-        self.append_text(self.textBuffer)
-
-
-        self.widgetList.append("\n")
-        return self.widgetList
+        # Insert any remaining text
+        self.insert_text(self.textBuffer)
+        self.text_widget.insert("end", "\n")
 
 class QuestStepsFrame(Frame):
     def __init__(self, root, *args, **kwargs):
@@ -768,7 +864,11 @@ class QuestStepsFrame(Frame):
         self.imgPath = os.environ["imgPath"]
         self.image_host = []
         self.steps = []
-        self.text_widget = ScrolledText(self, borderwidth=0, relief=None, background=None)
+        
+        # Get the default tkinter font but make it size 10
+        default_font = Font(root=root, size=10)
+        
+        self.text_widget = ScrolledText(self, borderwidth=0, relief=None, background=None, font=default_font, wrap="word")
         self.text_widget.pack(fill="both", expand=True, ipadx=0, ipady=0)
 
     def set_steps(self, stepsDict:dict):
@@ -779,11 +879,14 @@ class QuestStepsFrame(Frame):
         # - ol: ordered lists
         # - li: list items
 
+        self.clear_steps()
+        self.text_widget.configure(state="normal")
+
+        # Create a single MarkdownTextGenerator instance for all steps
+        markdown_generator = MarkdownTextGenerator(self.text_widget, "", self.imgPath, self.image_host)
+
         def _process_list(step:dict, indent_level:int):
             list_type = step["tag"]
-            
-            steps = []
-
             i = 0
             for substep in step["steps"]:
                 if list_type == "ol":
@@ -794,52 +897,49 @@ class QuestStepsFrame(Frame):
                 if substep["tag"] == "li":
                     i += 1
 
-                steps.extend(_process_list_item(substep, indent_level, prefix))
-                
-            
-            return steps
+                _process_list_item(substep, indent_level, prefix)
 
         def _process_list_item(step:dict, indent_level:int, prefix:str):
             if step["tag"] in ["ul", "ol"]:
-                return _process_list(step, indent_level+1)
-            if step["tag"] == "li":
-                return [_process_li(step, prefix, indent_level)]
+                _process_list(step, indent_level+1)
+            elif step["tag"] == "li":
+                _process_li(step, prefix, indent_level)
             else:
                 raise ValueError(f"Invalid tag {step['tag']}")
 
-        def _process_li(step:str, prefix:str, indent_level:int):
+        def _process_li(step:dict, prefix:str, indent_level:int):
             newPrefix = "🡂"*indent_level + prefix
-            return MarkdownTextGenerator(self.text_widget, step["text"], self.imgPath, self.image_host, startText=newPrefix, imgDict=step["img"] if "img" in step else {}).insert_markdown()
+            # Use the new parameter-based approach
+            markdown_generator.insert_markdown(
+                markdown_string=step["text"],
+                start_text=newPrefix,
+                image_dict=step["img"] if "img" in step else {}
+            )
 
-        def _process_p(step:str):
-            return MarkdownTextGenerator(self.text_widget, step["text"], self.imgPath, self.image_host, imgDict=step["img"] if "img" in step else {}).insert_markdown()
-
-        self.clear_steps()
-        self.text_widget.configure(state="normal")
-
+        def _process_p(step:dict):
+            # Use the new parameter-based approach
+            markdown_generator.insert_markdown(
+                markdown_string=step["text"],
+                start_text="",
+                image_dict=step["img"] if "img" in step else {}
+            )
 
         try:
             for step in stepsDict:
                 if step["tag"] == "p":
-                    self.steps.append(_process_p(step))
-                elif step["tag"] == "h": #FIXME: Add headings
-                    self.steps.append(_process_p(step))
+                    _process_p(step)
+                elif step["tag"] == "h":
+                    # Add some spacing before headings
+                    if self.text_widget.get("1.0", "end-1c"):  # If not empty
+                        self.text_widget.insert("end", "\n")
+                    _process_p(step)
                 elif step["tag"] in ["ul", "ol"]:
-                    self.steps.extend(_process_list(step, indent_level=1))
+                    _process_list(step, indent_level=1)
                 else:
                     print("WARNING: Unhandled tag", step["tag"])
         except Exception as e:
             showerror("Error", f"An error occurred while processing the steps, press OK to show the error message in the console.")
             raise e
-
-        # Place all the widgets contained in the steps list
-        for step in self.steps:
-            # Insert the step into the text widget
-            for widget in step:
-                if isinstance(widget, str):
-                    self.text_widget.insert("end", widget)
-                else:
-                    self.text_widget.window_create("end", window=widget)
 
         self.text_widget.configure(state="disabled")
 
@@ -868,10 +968,28 @@ class StartingLocationFrame(Frame):
 
     def set_start(self, infodict):
         self.clear_start()
-        widgets = MarkdownTextGenerator(self.internal_frame, infodict["text"], self.imgPath, [], startText="Location: ").insert_markdown()
-        for widget in widgets:
-            if isinstance(widget, str): continue
-            widget.pack(side="left", anchor="w")
+        
+        # Create a Text widget for the markdown content
+        from tkinter.font import Font
+        default_font = Font(size=10)
+        text_widget = Text(self.internal_frame, borderwidth=0, relief="flat", 
+                          background=self.cget("background"), font=default_font, 
+                          wrap="word", height=2, cursor="arrow")
+        text_widget.pack(side="left", anchor="w", fill="x", expand=True)
+        
+        # Configure center alignment for the text
+        text_widget.tag_configure("center", justify="center")
+        
+        # Use MarkdownTextGenerator to populate the text widget
+        markdown_generator = MarkdownTextGenerator(text_widget, infodict["text"], 
+                                                  self.imgPath, [], startText="Location: ")
+        markdown_generator.insert_markdown()
+        
+        # Apply center alignment to all text
+        text_widget.tag_add("center", "1.0", "end")
+        
+        # Make the text widget read-only
+        text_widget.configure(state="disabled")
 
     def clear_start(self):
         # Delete all children in frame
