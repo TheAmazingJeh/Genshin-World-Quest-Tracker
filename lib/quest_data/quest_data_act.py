@@ -39,27 +39,38 @@ class QuestAct(Quest):
             # This indicates that the step has a either a combat section or an item section
             stepItems = tag.select('span.item')
 
+            # First process images in stepItems
+            if stepItems:
+                for item in stepItems:              
+                    img_tag = item.select_one('img')
+                    if img_tag:
+                        # Get the image src (data-src if available, else src)
+                        img_src = (img_tag['data-src'] if 'data-src' in img_tag.attrs else img_tag['src']).rsplit('.png')[0] + ".png"
+                        self.quest_img_urls.append(img_src)
+                        # resize the image to 20x20
+                        # img_src = resize(img_src, 20, 20)
+                        img_tag.replace_with(f"<img:{name_to_id(img_tag['alt'])}>")
+                        step_dict["img"][f"{name_to_id(img_tag['alt'])}"] = get_image_path(img_src)
+
             # Format all a tags in the step using markdown
             for a_tag in tag.select('a'):
+                # Check if this a_tag is inside a stepItem (which would contain an image)
                 ignore = False
                 if stepItems:
-                    for item in stepItems:              
-                        img_tag = item.select_one('img')
-                        if img_tag:
-                            # Get the image src (data-src if available, else src)
-                            img_src = (img_tag['data-src'] if 'data-src' in img_tag.attrs else img_tag['src']).rsplit('.png')[0] + ".png"
-                            self.quest_img_urls.append(img_src)
-                            # resize the image to 20x20
-                            # img_src = resize(img_src, 20, 20)
-                            img_tag.replace_with(f"<img:{name_to_id(img_tag['alt'])}>")
-                            step_dict["img"][f"{name_to_id(img_tag['alt'])}"] = get_image_path(img_src)
+                    for item in stepItems:
+                        if item.find(a_tag):  # Check if a_tag is a descendant of this item
                             ignore = True
+                            break
                 
-                # If the a tag does not have an img tag as a child, format it using markdown
+                # If the a tag is not part of an image item, format it using markdown
                 if not ignore:
                     # Check if <img: in the a tag text (If it is an image tag, ignore it)
                     if not "<img:" in a_tag.get_text():
-                        a_tag.replace_with(f"◀{a_tag.get_text()}▶◁{a_tag['href']}▷")
+                        # Check if a_tag has a href attribute
+                        if 'href' in a_tag.attrs:
+                            a_tag.replace_with(f"◀{a_tag.get_text()}▶◁{a_tag['href']}▷")
+                        else:
+                            print(f"Warning: {a_tag} does not have a href attribute")
                 
             # If the step does not have a sub-step, add the step to the list
             step_dict["text"] = tag.get_text().split('\n')[0].strip()
