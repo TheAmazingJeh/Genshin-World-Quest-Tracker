@@ -60,9 +60,7 @@ class Download:
                 for url in quest.quest_img_urls:
                     path = os.path.join(os.environ["imgPath"], get_image_path(url))
                     if not os.path.exists(path):
-                        resp = requests.get(url)
-                        with open(path, "wb") as img:
-                            img.write(resp.content)
+                        self.download_image(url, get_image_path(url))
         
         def loopThroughSeries(seriesData:dict, path:str):
             # Loop through the quests
