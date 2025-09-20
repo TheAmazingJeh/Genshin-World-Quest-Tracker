@@ -82,6 +82,8 @@ def get_quest_rewards(soup:BeautifulSoup):
                 img = "https://static.wikia.nocookie.net/gensin-impact/images/a/a5/Item_Recipe.png"
             elif inner_span.select_one('a')['title'].startswith("Instructions: "):
                 img = "https://static.wikia.nocookie.net/gensin-impact/images/e/ed/Item_Instructions.png"
+            elif inner_span.select_one('a')['title'].startswith("Formula: "):
+                img = "https://static.wikia.nocookie.net/gensin-impact/images/5/51/Item_Formula.png"
             else:
                 # Get the image of the item using the data-src parameter of the img tag, or the src parameter if the data-src parameter is not found
                 try: img = inner_span.select_one('a > img')['data-src']
