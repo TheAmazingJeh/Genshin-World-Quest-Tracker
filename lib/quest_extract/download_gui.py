@@ -126,8 +126,13 @@ def download_data_prompt(tk_window=None, show_prompt=True):
     downloadAutomatic = askokcancel("Error", "World Quest Data is missing. This is either available on the github page or can be generated now. Would you like to generate it now?")
     if downloadAutomatic:
         download()
-        showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
+        # Create a temporary top-level window to ensure showinfo is always on top
+        temp = Tk()
+        temp.withdraw()
+        temp.attributes("-topmost", True)
+        showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.", parent=temp)
+        temp.destroy()
     else:
         if tk_window is not None: 
             tk_window.quit()
-    sys.exit() 
+    sys.exit()

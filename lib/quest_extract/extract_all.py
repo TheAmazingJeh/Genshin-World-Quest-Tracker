@@ -52,9 +52,10 @@ class Download:
         """
         with open(self.convertIDToNameDict, 'r', encoding="utf-8") as file:
             self.convertIDToNameDictOpen = json.load(file)
-        def saveQuestData(name:str, path:str):
-            # Get the quest data
-            quest = getQuest(name, worldQuestDataDict, os.environ["cachePath"], self.convertIDToNameDictOpen)
+        def saveQuestData(name:str, path:str, quest=None):
+            # Get the quest data if not provided
+            if quest is None:
+                quest = getQuest(name, worldQuestDataDict, os.environ["cachePath"], self.convertIDToNameDictOpen)
             # Save the quest data
             with open(os.path.join(path, name_to_id(name) + ".json"), 'w', encoding="utf-8") as file:
                 json.dump(quest.quest_data, file, indent=4)
@@ -147,7 +148,7 @@ class Download:
                     quest = getQuest(questName, worldQuestDataDict, os.environ["cachePath"], self.convertIDToNameDictOpen)
 
                     
-                    saveQuestData(questName, currentPath)
+                    saveQuestData(questName, currentPath, quest)
 
                     if quest.quest_data["type"] in ["series", "act"]:
                         if not os.path.exists(os.path.join(currentPath, name_to_id(questName))):
