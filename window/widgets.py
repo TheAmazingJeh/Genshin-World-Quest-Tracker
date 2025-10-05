@@ -551,6 +551,11 @@ class QuestDetailsFrame(Frame):
     def get_type(self):
         return self.questData["type"]
 
+    def set_axp_mora_convert(self, value:bool):
+        self.questRewards.convertXp = value
+        if "rewards" in self.questData and self.questData["rewards"] is not None:
+            self.questRewards.set_rewards(self.questData["rewards"])
+
 class QuestReward(Frame):
     questInfoDictTemplate = {
         "Name": "",
@@ -601,8 +606,10 @@ class QuestRewardFrame(Frame):
     def __init__(self, parent, *args, **kwargs):
         # Create frame that is the same width as the parent
         super().__init__(parent, *args, **kwargs)
+        self.parent = parent
         self.max_x = 9
         self.imgPath = os.environ["imgPath"]
+        self.convertXp = False
 
     def rewards_popup(self, rewardsList:list):
         rewardsList = deepcopy(rewardsList)
@@ -624,15 +631,48 @@ class QuestRewardFrame(Frame):
 
     def set_rewards(self, rewardsList:list):
         self.clear_rewards()
-        flag = False
+        show_more_flag = False
+        xp_multiplier = 10
+        
+        if self.convertXp:
+            # Get total adventure rank xp amount
+            adventure_exp_rewards = filter(lambda reward: reward["Name"] == "Adventure EXP", rewardsList)
+            adventure_exp_values = map(lambda reward: int(reward["Value"].replace(",", "")), adventure_exp_rewards)
+            total_adventure_exp = sum(adventure_exp_values)
+
+            # Locate Mora object (If it exists)
+            mora_rewards = next(filter(lambda reward: reward["Name"] == "Mora", rewardsList), None)
+            if mora_rewards: 
+                mora_rewards["Value"] = "{:,}".format(int(mora_rewards["Value"].replace(",",""))+total_adventure_exp*xp_multiplier)
+                # Kill the xp
+                for i, reward in enumerate(rewardsList):
+                    if reward["Name"] == "Adventure EXP":
+                        del rewardsList[i]
+                        break
+                
+            elif total_adventure_exp == 0:
+                pass # This is normal
+            else:
+                # If there is adventure EXP but no Mora reward, replace Adventure EXP with Mora reward
+                for i, reward in enumerate(rewardsList):
+                    if reward["Name"] == "Adventure EXP":
+                        rewardsList[i] = {
+                            "Name": "Mora",
+                            "Value": "{:,}".format(total_adventure_exp * xp_multiplier),
+                            "Link": "https://genshin-impact.fandom.com/wiki/Mora",
+                            "Image": "Item_Mora.png",
+                            "Rarity": "3"
+                        }
+                        break
+        
         if len(rewardsList) > self.max_x:
             temp = rewardsList
             rewardsList = rewardsList[:self.max_x-1]
-            flag = True
+            show_more_flag = True
         for reward in rewardsList:
             r = QuestReward(self, self.imgPath, questInfoDict=reward)
             r.pack(side="left", padx=1)
-        if flag:
+        if show_more_flag:
             r = QuestReward(self, self.imgPath, questInfoDict={"Name": "More", "Value": f"{str(len(temp)-self.max_x+1)}", "Link": None, "Image": "!Img_more.png", "Rarity": "1"}, click_event=lambda _: self.rewards_popup(temp))
             r.pack(side="left", padx=1)
         

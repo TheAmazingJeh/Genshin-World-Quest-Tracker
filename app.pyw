@@ -1,7 +1,7 @@
 import os, sys, shutil, json
 
 
-from tkinter import Tk, Frame, Menu
+from tkinter import Tk, Frame, Menu, BooleanVar
 from tkinter.messagebox import askokcancel, showinfo
 
 from window.widgets import WorldQuestFrame, QuestDetailsFrame, FilterFrame
@@ -84,6 +84,14 @@ class App(Tk):
         self.menu = Menu(self)
         # Add a File Cascade
         self.fileMenu = Menu(self.menu, tearoff=0)
+        self.convert_axp_to_mora = BooleanVar(value=False)
+
+        self.fileMenu.add_checkbutton(
+            label="Convert Xp to Mora",
+            command=self.toggle_axp_mora_convert,
+            variable=self.convert_axp_to_mora
+        )
+        self.fileMenu.add_separator()
         self.fileMenu.add_command(label="Repair Resources", command=self.menu_download)
         self.fileMenu.add_command(label="Re-Download Resources", command=self.menu_reFetchWorldQuestsAndDownload)
         self.fileMenu.add_separator()
@@ -94,6 +102,12 @@ class App(Tk):
         self.menu.add_separator()
 
         self.config(menu=self.menu)
+
+    def toggle_axp_mora_convert(self):
+        self.questDetailsFrame.set_axp_mora_convert(self.convert_axp_to_mora.get())
+        # Reload the current quest to update the rewards display
+        currentQuestID = self.questDetailsFrame.get_id()
+        self.change_loaded_quest(currentQuestID)
 
     def menu_download(self):
         download()
