@@ -1,7 +1,8 @@
-import os, sys, shutil
+import os
+import sys
+import shutil
 
 from lib.quest_extract.extract_all import Download
-from lib.page.get_wiki_url_from_name import get_wiki_url_from_name
 from tkinter import Tk, Label
 from tkinter.ttk import Progressbar
 from tkinter.messagebox import askokcancel, showinfo
@@ -67,41 +68,59 @@ def download():
     while True:
         p.update()
         p.step()
-        if p.complete: break
+        if p.complete: 
+            break
 
-def reFetchWorldQuestsAndDownload():
-    if os.path.exists(os.environ["cachePath"]):
-        # Delete the world quest list cache
-        try: os.remove(os.path.join(os.environ["cachePath"], "wiki_World_Quest_List.html"))
-        except FileNotFoundError: pass
-        # Delete the world quest data dictionary
-        try: os.remove(os.environ["worldQuestDataDict"])
-        except FileNotFoundError: pass
-        # Delete the conversion reference
-        try: os.remove(os.path.join(os.environ["dataPath"], "convertIDToNameDict.json"))
-        except FileNotFoundError: pass
-        download()
-        showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
-        sys.exit()
-
-
-def resetAndDownload():
-    # Delete the cached data folder
-    if os.path.exists(os.environ["cachePath"]): shutil.rmtree(os.environ["cachePath"])
-    # Delete the data folder (but not the completed quests file)
-    if os.path.exists(os.environ["dataPath"]): 
-        shutil.rmtree(os.path.join(os.environ["dataPath"], "quests"))
-        shutil.rmtree(os.path.join(os.environ["dataPath"], "img"))
+def _cleanup_common_files():
+    """Clean up common files that need to be removed during data refresh."""
     # Delete the world quest data dictionary
-    try: os.remove(os.environ["worldQuestDataDict"])
-    except FileNotFoundError: pass
+    try: 
+        os.remove(os.environ["worldQuestDataDict"])
+    except FileNotFoundError: 
+        pass
     # Delete the conversion reference
-    try: os.remove(os.path.join(os.environ["dataPath"], "convertIDToNameDict.json"))
-    except FileNotFoundError: pass
+    try: 
+        os.remove(os.path.join(os.environ["dataPath"], "convertIDToNameDict.json"))
+    except FileNotFoundError: 
+        pass
 
+
+def _download_and_exit():
+    """Download data and exit with success message."""
     download()
     showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
     sys.exit()
+
+
+def reFetchWorldQuestsAndDownload():
+    """Re-fetch world quest data by clearing specific cache files."""
+    if os.path.exists(os.environ["cachePath"]):
+        # Delete the world quest list cache
+        try: 
+            os.remove(os.path.join(os.environ["cachePath"], "wiki_World_Quest_List.html"))
+        except FileNotFoundError: 
+            pass
+        
+        _cleanup_common_files()
+        _download_and_exit()
+
+
+def resetAndDownload():
+    """Reset all data by clearing cache and data folders completely."""
+    # Delete the cached data folder
+    if os.path.exists(os.environ["cachePath"]): 
+        shutil.rmtree(os.environ["cachePath"])
+    
+    # Delete the data folder (but not the completed quests file)
+    if os.path.exists(os.environ["dataPath"]): 
+        data_path = os.environ["dataPath"]
+        for folder in ["quests", "img"]:
+            folder_path = os.path.join(data_path, folder)
+            if os.path.exists(folder_path):
+                shutil.rmtree(folder_path)
+    
+    _cleanup_common_files()
+    _download_and_exit()
 
 def download_data_prompt(tk_window=None, show_prompt=True):
     downloadAutomatic = askokcancel("Error", "World Quest Data is missing. This is either available on the github page or can be generated now. Would you like to generate it now?")
@@ -109,5 +128,6 @@ def download_data_prompt(tk_window=None, show_prompt=True):
         download()
         showinfo("Done", "Data has been downloaded. Please re-launch the program for the changes to take effect.")
     else:
-        if tk_window is not None: tk_window.quit()
+        if tk_window is not None: 
+            tk_window.quit()
     sys.exit() 
