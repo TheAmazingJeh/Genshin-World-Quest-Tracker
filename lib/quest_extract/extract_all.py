@@ -26,8 +26,10 @@ class Download:
         """
         # Check if the file exists, or if the user wants to force an update
         if os.path.exists(os.environ["worldQuestDataDict"]) and not self.forceUpdate:
-            print("Data already exists. Use `forceUpdate=True` to force update the data")
-            return
+            with open(os.environ["worldQuestDataDict"], 'r', encoding="utf-8") as file:
+                if json.load(file) != {}:
+                    print("Data already exists. Use `forceUpdate=True` to force update the data")
+                    return
     
         questSeriesDataObject = WorldQuestSeriesData(os.environ, self.convertIDToNameDict)
         questSeriesData = questSeriesDataObject.getAll()
