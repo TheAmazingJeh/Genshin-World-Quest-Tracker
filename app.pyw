@@ -88,7 +88,6 @@ class App(Tk):
         self.filterFrame.update()
         self.filterFrame.set_expand_button(False)
         self.filterFrame.set_back_button(False)
-        self.worldQuestFrame.reload()
         # Show the window
         self.deiconify()
 
@@ -198,18 +197,14 @@ class App(Tk):
         self.questDetailsFrame.grid(row=1, column=1, sticky="se")
 
     def change_region(self, region: str, reload: bool = True):
-        self.worldQuestFrame.set_region(region)
-        if not reload:
-            return
-        self.worldQuestFrame.reload()
-        self.questDetailsFrame.reset()
+        self.worldQuestFrame.set_region(region, reload=reload)
+        if reload:
+            self.questDetailsFrame.reset()
 
     def change_shown_types(self, types: str, reload: bool = True):
-        self.worldQuestFrame.set_shown_types(types)
-        if not reload:
-            return
-        self.worldQuestFrame.reload()
-        self.questDetailsFrame.reset()
+        self.worldQuestFrame.set_shown_types(types, reload=reload)
+        if reload:
+            self.questDetailsFrame.reset()
 
     def expand_world_quest(self):
         # Check if the quest is a series

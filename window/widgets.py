@@ -417,7 +417,7 @@ class WorldQuestFrame(Frame):
         except IndexError:
             return None
 
-    def set_shown_types(self, shown_quests: str):
+    def set_shown_types(self, shown_quests: str, reload: bool = True):
         """Sets the type of quests to be shown in the listbox.
 
         Options:
@@ -429,15 +429,17 @@ class WorldQuestFrame(Frame):
         if shown_quests not in ["None", "Single", "Series", "Both"]:
             raise ValueError("Invalid value for `shown_quests`")
         self.shown_quests = shown_quests
-        self.reload()
+        if reload:
+            self.reload()
 
-    def set_region(self, regionName: str):
+    def set_region(self, regionName: str, reload: bool = True):
         """Sets the current region, and reloads the listbox with the quests from the region."""
         self.current_region = regionName
         os.environ["currentSelectedQuestPath"] = os.path.join(
             os.environ["baseQuestPath"], self.current_region
         )
-        self.reload()
+        if reload:
+            self.reload()
 
     def get_region(self):
         """Returns the current region."""
@@ -450,6 +452,9 @@ class WorldQuestFrame(Frame):
             return
         if self.shown_quests == "None":
             return
+
+        # Reset the quest loading error flag at the start of each reload
+        os.environ["questLoadingErrorFlag"] = "False"
 
         # Reopen the completed quest data file
         self.completedQuestData = load_json(
@@ -480,8 +485,10 @@ class WorldQuestFrame(Frame):
         if os.environ["questLoadingErrorFlag"] == "True":
             showwarning(
                 "Error",
-                "There was an error one or more quests, please repair the quests and try again.",
+                "There was an error loading one or more quests, please repair the quests and try again.",
             )
+            # Reset the flag after showing the warning to prevent duplicate warnings
+            os.environ["questLoadingErrorFlag"] = "False"
 
     def mark_complete(self):
         """Marks a quest as complete in the `completedQuestData.json` file."""
@@ -658,6 +665,9 @@ class QuestDetailsFrame(Frame):
             self.questSteps.pack(padx=10, pady=5, fill="x")
 
     def set_data(self, path: str):
+        if path is None or not os.path.exists(path):
+            print(f"Quest file does not exist: {path.split(os.sep)[-1]}")
+            return
         with open(path, "r", encoding="utf-8") as f:
             self.questData = json.load(f)
 
@@ -1374,8 +1384,9 @@ class FilterFrame(Frame):
         self.update_region_command(self.regionDropdown.cget("text"))
 
     def update(self):
-        self.update_region()
-        self.update_type()
+        # Call the commands with reload=False to avoid multiple reload() calls
+        self.update_region_command(self.regionDropdown.cget("text"), reload=False)
+        self.update_type_command(self.questTypeDropdown.cget("text"), reload=True)  # Only reload once, at the end
 
     def set_expand_button(self, state: bool):
         self.questSeriesOpenButton.config(state="normal" if state else "disabled")
