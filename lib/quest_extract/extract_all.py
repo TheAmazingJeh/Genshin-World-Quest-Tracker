@@ -1,4 +1,6 @@
-import os, json, requests
+import os
+import json
+import requests
 from datetime import datetime
 from lib.quest_extract.all_world_quests import WorldQuestSeriesData
 from utils.quest_utils import getQuest
@@ -95,8 +97,10 @@ class Download:
         with open(os.environ["worldQuestDataDict"], 'r', encoding="utf-8") as file:
             worldQuestDataDict = json.load(file)
 
-        if "timeUpdated" not in worldQuestDataDict: lastUpdated = datetime.now()
-        else: lastUpdated = datetime.strptime(worldQuestDataDict["timeUpdated"], "%Y-%m-%d %H:%M:%S")
+        if "timeUpdated" not in worldQuestDataDict: 
+            lastUpdated = datetime.now()
+        else: 
+            lastUpdated = datetime.strptime(worldQuestDataDict["timeUpdated"], "%Y-%m-%d %H:%M:%S")
         # Print how long ago the data was last updated
         print(f"Data was last updated {lastUpdated.strftime('%Y-%m-%d %H:%M:%S')}")
         self.worldQuestDataDict = worldQuestDataDict["regions"]
@@ -163,8 +167,8 @@ class Download:
         placeholders = [74, 256]
         for placeholder in placeholders:
             self.download_image(f"https://placehold.co/{placeholder}/gray/white.png?text=Placeholder%5Cn{placeholder}x{placeholder}", f"{placeholder}.png")
-        self.download_image(f"https://placehold.co/74/gray/white.png?text=More", "!Img_more.png")
-        self.download_image(f"https://placehold.co/74/gray/white.png?text=Close", "!Img_close.png")
+        self.download_image("https://placehold.co/74/gray/white.png?text=More", "!Img_more.png")
+        self.download_image("https://placehold.co/74/gray/white.png?text=Close", "!Img_close.png")
         
         self._allWorldQuests()
         generator = self._allWorldQuestsData()

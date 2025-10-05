@@ -1,6 +1,3 @@
-from bs4 import BeautifulSoup
-from copy import deepcopy
-
 from utils.file_functions import get_image_path, name_to_id
 
 from lib.quest_data.quest_data import Quest, get_quest_rewards
@@ -17,7 +14,8 @@ class QuestSingle(Quest):
         
         # Select the target div using the data-source attribute
         target_div = soup.select_one('div[data-source="startLocation"]')
-        if not target_div: return None
+        if not target_div: 
+            return None
         
         # Select the div with start location data in it
         data_value_div = target_div.select_one('div[class*="pi-data-value"]') if target_div else None
@@ -54,7 +52,8 @@ class QuestSingle(Quest):
         
         # Select the target div using the data-source attribute
         target_div = soup.select_one('div[data-source="requirement"]')
-        if not target_div: return None
+        if not target_div: 
+            return None
         
         # Select the div with class "pi-data-value pi-font" inside the target div
         data_value_div = target_div.select_one('div[class*="pi-data-value"]') if target_div else None
@@ -94,7 +93,8 @@ class QuestSingle(Quest):
         
         # Select the target div using the data-source attribute
         target_div = soup.select_one('div[data-source*="rewards"]')
-        if not target_div: return None
+        if not target_div: 
+            return None
 
         rewards, quest_image_urls = get_quest_rewards(target_div)
         self.quest_img_urls.extend(quest_image_urls)
@@ -122,7 +122,8 @@ class QuestSingle(Quest):
             # step = BeautifulSoup(str(step).replace('×', 'x'), 'lxml')
 
             # Remove any span with the class "mobile-only"
-            for span in tag.select('span.mobile-only'): span.decompose()
+            for span in tag.select('span.mobile-only'): 
+                span.decompose()
 
             # Check if the step has a span tag with class "item"
             # This indicates that the step has a either a combat section or an item section
@@ -154,7 +155,7 @@ class QuestSingle(Quest):
                 # If the a tag is not part of an image item, format it using markdown
                 if not ignore:
                     # Check if <img: in the a tag text (If it is an image tag, ignore it)
-                    if not "<img:" in a_tag.get_text():
+                    if "<img:" not in a_tag.get_text():
                         # Check if a_tag has a href attribute
                         if 'href' in a_tag.attrs:
                             a_tag.replace_with(f"◀{a_tag.get_text()}▶◁{a_tag['href']}▷")
@@ -163,7 +164,8 @@ class QuestSingle(Quest):
 
             # If the step does not have a sub-step, add the step to the list
             step_dict["text"] = tag.get_text().split('\n')[0].strip()
-            if step_dict['img'] == {}: del step_dict['img']
+            if step_dict['img'] == {}: 
+                del step_dict['img']
             return step_dict
 
         def process_list(tagType, tag):
@@ -214,7 +216,7 @@ class QuestSingle(Quest):
                     step_list.append(process_text("p", tag))
                 if tag.name in ["ol", "ul"]:
                     # Check if tag has a parent
-                    if tag.parent != None:
+                    if tag.parent is not None:
                         step_list.append(process_list(tag.name, tag))
         
         if step_list == []:

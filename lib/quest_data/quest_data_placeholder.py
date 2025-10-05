@@ -1,8 +1,3 @@
-from bs4 import BeautifulSoup
-from copy import deepcopy
-
-from utils.file_functions import get_image_path, name_to_id
-
 from lib.quest_data.quest_data import Quest
 
 class QuestPlaceholder(Quest):

@@ -1,4 +1,6 @@
-import requests, os, time
+import requests
+import os
+import time
 from bs4 import BeautifulSoup
 
 def get_local_page(url: str, cachePath:str, refresh: bool = False, retryAmount: int = 10):
@@ -13,14 +15,16 @@ def get_local_page(url: str, cachePath:str, refresh: bool = False, retryAmount: 
         while retryAmount > 0:
             response = requests.get(url)
             # Check response status code
-            if response.status_code == 200: break
+            if response.status_code == 200: 
+                break
             else:
                 retryAmount -= 1
                 for i in range(10, 0, -1):
                     print(f"Error: {response.status_code} for {url}. Retrying in {i} seconds...", end='\r')
                     time.sleep(1)
                 print("Retrying...                                                      ")
-        if retryAmount == 0: raise TimeoutError("Failed to get the page after 10 retries.")
+        if retryAmount == 0: 
+            raise TimeoutError("Failed to get the page after 10 retries.")
 
         response = response.text
         

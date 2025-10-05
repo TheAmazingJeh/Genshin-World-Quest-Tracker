@@ -1,7 +1,5 @@
 import urllib.parse
 
-import json
-
 def get_wiki_url_from_name(name, conversionRef):
     baseurl = 'https://genshin-impact.fandom.com/wiki/'
     # Construct the URL and url-encode the name

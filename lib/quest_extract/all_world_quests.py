@@ -69,7 +69,8 @@ class WorldQuestSeriesData:
                 if tag.name == 'h2':
                     read = True
                     #if (span := tag.select_one('span[class="mw-editsection"]')): span.decompose()
-                    if (span := tag.select_one('span[class="mw-headline"]')): span.unwrap()
+                    if (span := tag.select_one('span[class="mw-headline"]')): 
+                        span.unwrap()
                     current_region = tag.text
                     data[current_region] = {}
                     data[current_region]["series"] = {}

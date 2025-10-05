@@ -1,4 +1,5 @@
-import os, json
+import os
+import json
 import shutil
 
 from tkinter.messagebox import askyesno

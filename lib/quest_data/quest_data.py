@@ -62,8 +62,10 @@ def get_quest_rewards(soup:BeautifulSoup):
         outer_span = card_container.select_one('span > span > span:nth-child(1)')
         inner_span = outer_span.select_one('span')
         # Get the amount of the item using the card-text class
-        try: current_reward['Value'] = card_container.select_one('span[class*="card-text"]').get_text().strip()
-        except Exception: current_reward['Value'] = "1"
+        try: 
+            current_reward['Value'] = card_container.select_one('span[class*="card-text"]').get_text().strip()
+        except Exception: 
+            current_reward['Value'] = "1"
         # Get the Name of the item using the title parameter of the a tag
         current_reward['Name'] = card_container.select_one('a')['title']
         # Get the rarity of the item from the class of the card-image-container span
@@ -86,8 +88,10 @@ def get_quest_rewards(soup:BeautifulSoup):
                 img = "https://static.wikia.nocookie.net/gensin-impact/images/5/51/Item_Formula.png"
             else:
                 # Get the image of the item using the data-src parameter of the img tag, or the src parameter if the data-src parameter is not found
-                try: img = inner_span.select_one('a > img')['data-src']
-                except KeyError: img = inner_span.select_one('a > img')['src']
+                try: 
+                    img = inner_span.select_one('a > img')['data-src']
+                except KeyError: 
+                    img = inner_span.select_one('a > img')['src']
         else:
             img = "https://static.wikia.nocookie.net/gensin-impact/images/f/f8/Icon_Emoji_Paimon%27s_Paintings_02_Qiqi_1.png"
         current_reward['Image'] = get_image_path(img)
