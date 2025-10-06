@@ -228,6 +228,16 @@ class WorldQuestFrame(Frame):
             item = ErrorQuestItem(questID)
             errorFlag = True
             os.environ["questLoadingErrorFlag"] = "True"
+        
+        # Apply quest type filtering
+        if self.shown_quests == "Single" and item.questType not in ["single"]:
+            return
+        elif self.shown_quests == "Series" and item.questType not in ["series", "act"]:
+            return
+        elif self.shown_quests == "None":
+            return
+        # If shown_quests is "Both", show all types
+        
         name = item.getDisplayName()
 
         self.listbox.insert("end", name)
@@ -381,12 +391,15 @@ class WorldQuestFrame(Frame):
         ) as f:
             completedQuestData = json.load(f)
         # Check if the dictionary contains "series" or "single" keys
-        # Process the single and series quest types
+        # Process the single and series quest types with filtering
         if isinstance(quests, dict) and {"series", "single"}.issubset(quests):
-            for quest in quests["series"]:
-                self.append_quest(quest, completedQuestData)
-            for quest in quests["single"]:
-                self.append_quest(quest, completedQuestData)
+            # Apply quest type filtering
+            if self.shown_quests in ["Series", "Both"]:
+                for quest in quests["series"]:
+                    self.append_quest(quest, completedQuestData)
+            if self.shown_quests in ["Single", "Both"]:
+                for quest in quests["single"]:
+                    self.append_quest(quest, completedQuestData)
             return
 
         # Check if the type of the quests is a list, and does not contain dictionaries
@@ -405,6 +418,42 @@ class WorldQuestFrame(Frame):
 
         raise ValueError("Invalid type for `quests`", type(quests))
 
+    def add_placeholder_text(self):
+        """Adds placeholder text when no quests are available for the current filter."""
+        # Determine the appropriate message based on the current filter
+        if self.shown_quests == "None":
+            message_lines = [
+                "No quest type selected.",
+                "Please select a quest type",
+                "from the dropdown above."
+            ]
+        elif self.shown_quests == "Single":
+            message_lines = [
+                "No single quests are available",
+                "for the current filter.",
+                "Try selecting 'Both' or 'Series'."
+            ]
+        elif self.shown_quests == "Series":
+            message_lines = [
+                "No series quests are available",
+                "for the current filter.",
+                "Try selecting 'Both' or 'Single'."
+            ]
+        else:  # "Both" or any other value
+            message_lines = [
+                "No quests are available",
+                "for the current filter.",
+                "Try changing your filters."
+            ]
+        
+        # Add each line to the listbox and make them unselectable
+        for i, line in enumerate(message_lines):
+            self.listbox.insert("end", line)
+            # Style the placeholder text differently (grayed out)
+            self.listbox.itemconfig(i, fg="#888888", bg=self.cget("background"))
+            # Add to data list with None to make them unclickable
+            self.data.append(None)
+
     def clear_all(self):
         """Clears all the items in the listbox and the data list."""
         self.listbox.delete(0, "end")
@@ -413,7 +462,11 @@ class WorldQuestFrame(Frame):
     def get_selected(self):
         """Returns the quest ID of the selected quest in the listbox."""
         try:
-            return self.data[self.listbox.curselection()[0]].getQuestID()
+            selected_item = self.data[self.listbox.curselection()[0]]
+            # Handle placeholder text (None items)
+            if selected_item is None:
+                return None
+            return selected_item.getQuestID()
         except IndexError:
             return None
 
@@ -482,6 +535,11 @@ class WorldQuestFrame(Frame):
                 raise ValueError("Invalid step in path")
 
         self.load_quests(current)
+        
+        # Check if no quests were loaded and add placeholder text
+        if self.listbox.size() == 0:
+            self.add_placeholder_text()
+        
         if os.environ["questLoadingErrorFlag"] == "True":
             showwarning(
                 "Error",
