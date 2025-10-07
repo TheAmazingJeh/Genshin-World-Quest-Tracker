@@ -85,9 +85,26 @@ class ToolTip(object):
         self.text = text
         if self.tipwindow or not self.text:
             return
-        x, y, cx, cy = self.widget.bbox("insert")
-        x = x + self.widget.winfo_rootx() + 57
-        y = y + cy + self.widget.winfo_rooty() + 27
+        
+        try:
+            # Get current mouse position relative to the widget
+            mouse_x = self.widget.winfo_pointerx() - self.widget.winfo_rootx()
+            mouse_y = self.widget.winfo_pointery() - self.widget.winfo_rooty()
+            
+            # Calculate tooltip position
+            x = self.widget.winfo_rootx() + mouse_x + 10
+            y = self.widget.winfo_rooty() + mouse_y + 10
+        except Exception:
+            # Fallback to widget bbox if mouse position fails
+            try:
+                x, y, cx, cy = self.widget.bbox("insert")
+                x = x + self.widget.winfo_rootx() + 57
+                y = y + cy + self.widget.winfo_rooty() + 27
+            except Exception:
+                # Final fallback to widget position
+                x = self.widget.winfo_rootx() + 10
+                y = self.widget.winfo_rooty() + 10
+        
         self.tipwindow = tw = Toplevel(self.widget)
         tw.wm_overrideredirect(1)
         tw.wm_geometry("+%d+%d" % (x, y))
@@ -111,12 +128,20 @@ class ToolTip(object):
         self.tipwindow = None
         if tw:
             tw.destroy()
+    
+    def update_position(self, event):
+        "Update tooltip position based on mouse movement"
+        if self.tipwindow:
+            x = self.widget.winfo_rootx() + event.x + 10
+            y = self.widget.winfo_rooty() + event.y + 10
+            self.tipwindow.wm_geometry("+%d+%d" % (x, y))
 
 
-def CreateToolTip(widget, text):
+def CreateToolTip(widget, text, track_motion=False):
     """Create a tooltip for a widget.
 
-    Attached to `widget` with the text `text`."""
+    Attached to `widget` with the text `text`.
+    If track_motion is True, tooltip will follow mouse movement."""
     toolTip = ToolTip(widget)
 
     def enter(event):
@@ -124,9 +149,17 @@ def CreateToolTip(widget, text):
 
     def leave(event):
         toolTip.hidetip()
+    
+    def motion(event):
+        if track_motion:
+            toolTip.update_position(event)
 
     widget.bind("<Enter>", enter)
     widget.bind("<Leave>", leave)
+    if track_motion:
+        widget.bind("<Motion>", motion)
+    
+    return toolTip
 
 
 class WorldQuestFrameItem:
@@ -992,7 +1025,6 @@ class MarkdownTextGenerator:
         self.linkText = ""
         self.links = []  # Store link information for click handling
         self.link_counter = 0  # Instance variable for unique link IDs
-        self.tooltip = None  # Initialize tooltip
 
     def insert_text(self, text, is_link=False, url=None):
         if text == "":
@@ -1019,59 +1051,38 @@ class MarkdownTextGenerator:
 
             def enter_handler(event, link_url=url):
                 self.text_widget.config(cursor="hand2")
-                self.show_tooltip(event, link_url)
+                # Create a new tooltip instance for this specific link
+                tooltip = ToolTip(self.text_widget)
+                # Store tooltip reference in the tag for cleanup
+                setattr(self.text_widget, f"{tag_name}_tooltip", tooltip)
+                # Schedule tooltip after 500ms delay
+                tooltip.id = self.text_widget.after(500, tooltip.showtip, link_url)
 
             def leave_handler(event):
                 self.text_widget.config(cursor="")
-                self.hide_tooltip()
+                # Get and cleanup the tooltip for this tag
+                tooltip = getattr(self.text_widget, f"{tag_name}_tooltip", None)
+                if tooltip:
+                    tooltip.hidetip()
+                    delattr(self.text_widget, f"{tag_name}_tooltip")
 
             def motion_handler(event):
-                if hasattr(self, "tooltip") and self.tooltip:
-                    self.update_tooltip_position(event)
+                # Always cancel and restart tooltip timer on ANY mouse movement
+                tooltip = getattr(self.text_widget, f"{tag_name}_tooltip", None)
+                if tooltip:
+                    # Cancel any existing timer or hide existing tooltip
+                    if tooltip.id:
+                        self.text_widget.after_cancel(tooltip.id)
+                    if tooltip.tipwindow:
+                        tooltip.hidetip()
+                    # Always restart the timer - tooltip only shows after 500ms of no movement
+                    tooltip.id = self.text_widget.after(500, tooltip.showtip, url)
 
-            # Bind events with the URL-capturing lambdas
+            # Bind events with the URL-capturing functions
             self.text_widget.tag_bind(tag_name, "<Button-1>", click_handler)
             self.text_widget.tag_bind(tag_name, "<Enter>", enter_handler)
             self.text_widget.tag_bind(tag_name, "<Leave>", leave_handler)
             self.text_widget.tag_bind(tag_name, "<Motion>", motion_handler)
-
-    def show_tooltip(self, event, text):
-        # Remove any existing tooltip
-        self.hide_tooltip()
-
-        # Calculate position
-        x = self.text_widget.winfo_rootx() + event.x + 10
-        y = self.text_widget.winfo_rooty() + event.y + 10
-
-        # Create tooltip window
-        self.tooltip = Toplevel(self.text_widget)
-        self.tooltip.wm_overrideredirect(True)
-        self.tooltip.wm_geometry(f"+{x}+{y}")
-
-        label = Label(
-            self.tooltip,
-            text=text,
-            justify="left",
-            background="#ffffe0",
-            relief="solid",
-            borderwidth=1,
-            font=("tahoma", "8", "normal"),
-        )
-        label.pack(ipadx=1)
-
-    def update_tooltip_position(self, event):
-        if hasattr(self, "tooltip") and self.tooltip:
-            # Calculate new position
-            x = self.text_widget.winfo_rootx() + event.x + 10
-            y = self.text_widget.winfo_rooty() + event.y + 10
-
-            # Update tooltip position
-            self.tooltip.wm_geometry(f"+{x}+{y}")
-
-    def hide_tooltip(self):
-        if hasattr(self, "tooltip") and self.tooltip:
-            self.tooltip.destroy()
-            self.tooltip = None
 
     def insert_image(self, image):
         # Remove the img: from the image string
